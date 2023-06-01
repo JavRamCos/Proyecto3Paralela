@@ -52,9 +52,13 @@ void CPU_HoughTran (unsigned char *pic, int w, int h, int **acc)
 }
 
 //*****************************************************************
-// GPU kernel. One thread per image pixel is spawned.
-// The accummulator memory needs to be allocated by the host in global memory
-__global__ void GPU_HoughTran (unsigned char *pic, int w, int h, int *acc, float rMax, float rScale, float* d_Cos, float* d_Sin)
+// TODO usar memoria constante para la tabla de senos y cosenos
+// inicializarlo en main y pasarlo al device
+__constant__ float d_Cos[degreeBins];
+__constant__ float d_Sin[degreeBins];
+
+//TODO Kernel memoria Constante
+__global__ void GPU_HoughTranConst(unsigned char *pic, int w, int h, int *acc, float rMax, float rScale)
 {
   //TODO calcular: int gloID = ?
   int gloID = ( blockIdx.x ) * blockDim.x +
@@ -89,14 +93,11 @@ int main (int argc, char **argv)
 {
   int i;
 
-  PGMImage* inImg = new PGMImage(argv[1],0);
+  PGMImage* inImg = new PGMImage(argv[1],1);
 
   int *cpuht;
   int w = inImg->getXDim();
   int h = inImg->getYDim();
-
-  float* d_Cos;
-  float* d_Sin;
 
   cudaEvent_t start, stop;
   cudaEventCreate(&start);
@@ -123,8 +124,8 @@ int main (int argc, char **argv)
   float rScale = 2 * rMax / rBins;
 
   // TODO eventualmente volver memoria global
-  cudaMemcpy(d_Cos, pcCos, sizeof (float) * degreeBins, cudaMemcpyHostToDevice);
-  cudaMemcpy(d_Sin, pcSin, sizeof (float) * degreeBins, cudaMemcpyHostToDevice);
+  cudaMemcpyToSymbol(d_Cos, pcCos, sizeof (float) * degreeBins);
+  cudaMemcpyToSymbol(d_Sin, pcSin, sizeof (float) * degreeBins);
 
   // setup and copy data from host to device
   unsigned char *d_in, *h_in;
@@ -143,7 +144,7 @@ int main (int argc, char **argv)
   //1 thread por pixel
   int blockNum = ceil (w * h / 256);
   cudaEventRecord(start);
-  GPU_HoughTran <<< blockNum, 256 >>> (d_in, w, h, d_hough, rMax, rScale, d_Cos, d_Sin);
+  GPU_HoughTranConst <<< blockNum, 256 >>> (d_in, w, h, d_hough, rMax, rScale);
 
   // get results from device
   cudaMemcpy (h_hough, d_hough, sizeof (int) * degreeBins * rBins, cudaMemcpyDeviceToHost);
@@ -167,7 +168,7 @@ int main (int argc, char **argv)
       lines.push_back(line);
     }
   }
-  inImg->write("Test.jpeg", lines, radInc, rBins);
+  inImg->write("Test2.jpeg", lines, radInc, rBins);
 
   cudaEventSynchronize(stop);
   float milliseconds = 0;
