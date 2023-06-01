@@ -8,10 +8,17 @@ class PGMImage
    int y_dim;
    int num_colors;
    unsigned char *pixels;
+<<<<<<< Updated upstream
    std::vector<int> colorRed;
  
  public:
    PGMImage(char *);
+=======
+   std::vector<int> color;
+ 
+ public:
+   PGMImage(char *fname, int programID);
+>>>>>>> Stashed changes
    PGMImage(int x, int y, int col);
    ~PGMImage(void);
    void write(const char* filename, std::vector<std::pair<int, int>> lines, float radInc, int rBins);
