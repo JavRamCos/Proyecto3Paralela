@@ -1,5 +1,4 @@
-/*
- ============================================================================
+/*============================================================================
  Author        : G. Barlas
  Version       : 1.0
  Last modified : December 2014
@@ -13,6 +12,8 @@
 #include <math.h>
 #include <cuda.h>
 #include <string.h>
+#include <vector>
+#include <jpeglib.h>
 #include "pgm.h"
 
 const int degreeInc = 2;
@@ -110,11 +111,11 @@ int main (int argc, char **argv)
 {
   int i;
 
-  PGMImage inImg (argv[1]);
+  PGMImage* inImg = new PGMImage(argv[1]);
 
   int *cpuht;
-  int w = inImg.x_dim;
-  int h = inImg.y_dim;
+  int w = inImg->getXDim();
+  int h = inImg->getYDim();
 
   float* d_Cos;
   float* d_Sin;
@@ -127,7 +128,7 @@ int main (int argc, char **argv)
   cudaMalloc ((void **) &d_Sin, sizeof (float) * degreeBins);
 
   // CPU calculation
-  CPU_HoughTran(inImg.pixels, w, h, &cpuht);
+  CPU_HoughTran(inImg->getPixels(), w, h, &cpuht);
 
   // pre-compute values to be stored
   float *pcCos = (float *) malloc (sizeof (float) * degreeBins);
@@ -151,7 +152,7 @@ int main (int argc, char **argv)
   unsigned char *d_in, *h_in;
   int *d_hough, *h_hough;
 
-  h_in = inImg.pixels; // h_in contiene los pixeles de la imagen
+  h_in = inImg->getPixels(); // h_in contiene los pixeles de la imagen
 
   h_hough = (int *) malloc (degreeBins * rBins * sizeof (int));
 
@@ -168,20 +169,27 @@ int main (int argc, char **argv)
 
   // get results from device
   cudaMemcpy (h_hough, d_hough, sizeof (int) * degreeBins * rBins, cudaMemcpyDeviceToHost);
-
   cudaEventRecord(stop);
+  
   // compare CPU and GPU results
   for (i = 0; i < degreeBins * rBins; i++)
   {
-    if (cpuht[i] != h_hough[i])
+    if (cpuht[i] != h_hough[i]) {
       printf ("Calculation mismatch at : %i %i %i\n", i, cpuht[i], h_hough[i]);
+    }
   }
   printf("Done!\n");
-
-  // TODO clean-up
-  if(!inImg.write("Test.pgm")) { 
-    printf("Write image failed ...\n"); 
+  std::vector<std::pair<int, int>> lines;
+  for (i = 0; i < degreeBins * rBins; i++){
+    if (h_hough[i] > 650) {
+      // pair order: r, th
+      int my_r = i / degreeBins;
+      int my_th = i % degreeBins;
+      std::pair<int, int> line = {my_r, my_th};
+      lines.push_back(line);
+    }
   }
+  inImg->write("Test.jpeg", lines, radInc, rBins);
 
   cudaEventSynchronize(stop);
   float milliseconds = 0;
@@ -193,6 +201,7 @@ int main (int argc, char **argv)
   cudaFree((void *) d_Sin);
   delete[] pcCos;
   delete[] pcSin;
+  delete inImg;
   cudaDeviceReset();
 
   return 0;
