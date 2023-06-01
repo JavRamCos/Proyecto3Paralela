@@ -14,6 +14,7 @@
 #include <string.h>
 #include <vector>
 #include <jpeglib.h>
+#include <string>
 #include "pgm.h"
 
 const int degreeInc = 2;
@@ -88,8 +89,11 @@ __global__ void GPU_HoughTran (unsigned char *pic, int w, int h, int *acc, float
 int main (int argc, char **argv)
 {
   int i;
+  std::string arg = argv[2];
+  std::size_t pos;
+  int threshold = std::stoi(arg,&pos);
 
-  PGMImage* inImg = new PGMImage(argv[1],0);
+  PGMImage* inImg = new PGMImage(argv[1], 0);
 
   int *cpuht;
   int w = inImg->getXDim();
@@ -159,7 +163,7 @@ int main (int argc, char **argv)
   printf("Done!\n");
   std::vector<std::pair<int, int>> lines;
   for (i = 0; i < degreeBins * rBins; i++){
-    if (h_hough[i] > 4000) {
+    if (h_hough[i] > threshold) {
       // pair order: r, th
       int my_r = i / degreeBins;
       int my_th = i % degreeBins;
@@ -167,7 +171,7 @@ int main (int argc, char **argv)
       lines.push_back(line);
     }
   }
-  inImg->write("Test.jpeg", lines, radInc, rBins);
+  inImg->write("BaseOutput.jpeg", lines, radInc, rBins);
 
   cudaEventSynchronize(stop);
   float milliseconds = 0;
