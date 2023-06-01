@@ -73,7 +73,8 @@ void CPU_HoughTran (unsigned char *pic, int w, int h, int **acc)
 __global__ void GPU_HoughTran (unsigned char *pic, int w, int h, int *acc, float rMax, float rScale, float *d_Cos, float *d_Sin)
 {
   //TODO calcular: int gloID = ?
-  int gloID = w * h + 1; //TODO
+  int gloID = ( blockIdx.x ) * blockDim.x +
+                threadIdx.x;
   if (gloID > w * h) return;      // in case of extra threads in block
 
   int xCent = w / 2;
@@ -118,6 +119,10 @@ int main (int argc, char **argv)
   float* d_Cos;
   float* d_Sin;
 
+  cudaEvent_t start, stop;
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+
   cudaMalloc ((void **) &d_Cos, sizeof (float) * degreeBins);
   cudaMalloc ((void **) &d_Sin, sizeof (float) * degreeBins);
 
@@ -158,11 +163,13 @@ int main (int argc, char **argv)
   // execution configuration uses a 1-D grid of 1-D blocks, each made of 256 threads
   //1 thread por pixel
   int blockNum = ceil (w * h / 256);
+  cudaEventRecord(start);
   GPU_HoughTran <<< blockNum, 256 >>> (d_in, w, h, d_hough, rMax, rScale, d_Cos, d_Sin);
 
   // get results from device
   cudaMemcpy (h_hough, d_hough, sizeof (int) * degreeBins * rBins, cudaMemcpyDeviceToHost);
 
+  cudaEventRecord(stop);
   // compare CPU and GPU results
   for (i = 0; i < degreeBins * rBins; i++)
   {
@@ -172,8 +179,21 @@ int main (int argc, char **argv)
   printf("Done!\n");
 
   // TODO clean-up
-  if(!inImg.write("Test.pgm")) { printf("Write image failed ...\n"); }
+  if(!inImg.write("Test.pgm")) { 
+    printf("Write image failed ...\n"); 
+  }
 
+  cudaEventSynchronize(stop);
+  float milliseconds = 0;
+  cudaEventElapsedTime(&milliseconds, start, stop);
+  printf("Milliseconds: %.3f ms\n" ,milliseconds);
+  printf("Seconds: %d.%.3d s\n", (int)milliseconds/1000, (int)milliseconds%1000);
+
+  cudaFree((void *) d_Cos);
+  cudaFree((void *) d_Sin);
+  delete[] pcCos;
+  delete[] pcSin;
+  cudaDeviceReset();
 
   return 0;
 }
