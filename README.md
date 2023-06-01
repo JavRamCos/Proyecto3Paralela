@@ -1,8 +1,4 @@
 
-# Project Title
-
-A brief description of what this project does and who it's for
-
 # Hough Transform CUDA Project
 
 This project is an implementation of the Hough Transform algorithm using CUDA. There are three main programs:
