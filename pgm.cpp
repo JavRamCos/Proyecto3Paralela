@@ -20,9 +20,6 @@ using namespace std;
 //-------------------------------------------------------------------
 PGMImage::PGMImage(char *fname, int programID)
 {
-<<<<<<< Updated upstream
-   this->colorRed = {255,0,0};
-=======
    if(programID == 0) {
         this->color = {255,0,0};
    } else if(programID == 1) {
@@ -30,7 +27,6 @@ PGMImage::PGMImage(char *fname, int programID)
    } else {
         this->color = {0,0,255};
    }
->>>>>>> Stashed changes
    this->x_dim=this->y_dim=this->num_colors=0;
    this->pixels=NULL;
    
@@ -110,11 +106,7 @@ void PGMImage::write(const char* outputFileName, std::vector<std::pair<int, int>
         }
         // Verify if pixel needs to be coloured
         if (isLine) {
-<<<<<<< Updated upstream
-            colorPixel(colorPixels, i, this->colorRed.at(0), this->colorRed.at(1), this->colorRed.at(2));  // Red color for line pixels
-=======
             colorPixel(colorPixels, i, this->color.at(0), this->color.at(1), this->color.at(2));  // Red color for line pixels
->>>>>>> Stashed changes
         } else {
             colorPixel(colorPixels, i, pixels[i], pixels[i], pixels[i]);  // Grayscale for non-line pixels
         }

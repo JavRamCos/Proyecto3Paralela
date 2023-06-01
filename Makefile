@@ -1,4 +1,4 @@
-all: pgm.o	hough houghConst houghShared
+all: pgm.o hough houghConst houghShared
 
 houghShared: houghShared.cu pgm.o
 	nvcc houghShared.cu pgm.o -ljpeg -o houghShared
